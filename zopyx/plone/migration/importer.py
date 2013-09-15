@@ -27,6 +27,7 @@ from Products.CMFPlone.factory import addPloneSite
 from Products.CMFPlone.utils import _createObjectByType
 from Products.CMFPlacefulWorkflow.WorkflowPolicyConfig import WorkflowPolicyConfig
 from Products.CMFPlacefulWorkflow.PlacefulWorkflowTool import WorkflowPolicyConfig_id
+from Products.CMFCore.Expression import Expression
 
 IGNORED_FIELDS = ('id', 'relatedItems')
 IGNORED_TYPES = (
@@ -55,6 +56,7 @@ PT_REPLACE_MAP = {
     'Newsletter' : 'ENLIssue',
     'GMap' : 'GeoLocation',
 #    'Topic': 'Collection',
+    'FKEvent': 'Event',
 }
 
 def import_plonegazette_subscribers(options, newsletter, old_uid):
@@ -376,6 +378,26 @@ def setReviewState(content, state_id, acquire_permissions=False,
     return
 
 
+def setSchemaField(obj, name, value):
+    field = obj.Schema().getField(name)
+    if field:
+        if field.type == "reference":
+            # reference fields are not handled here
+            return
+        if field.type == "tales":
+            # PFG fix
+            try:
+                value = Expression(value)
+            except:
+                value = ""
+        if isinstance(value, basestring) and value.startswith('file://'):
+            value = urllib2.urlopen(value).read()
+        try:
+            field.set(obj, value)
+        except Exception, e:
+            log('Unable to set %s for %s (%s)' % (name, obj.absolute_url(1), e))
+
+
 def update_content(options, new_obj, old_uid):
     """ Update schema data of 'new_obj' with the pickled
         data for 'old_uid'.
@@ -389,17 +411,7 @@ def update_content(options, new_obj, old_uid):
     for k, v in obj_data['schemadata'].items():
         if k in IGNORED_FIELDS:
             continue
-        field = new_obj.Schema().getField(k)
-        if field:
-            if field.type == "reference":
-                # reference fields are handled later
-                continue
-            if isinstance(v, basestring) and v.startswith('file://'):
-                v = urllib2.urlopen(v).read()
-            try:
-                field.set(new_obj, v)
-            except Exception, e:
-                log('Could not update field %s of %s (error=%s)' % (field.getName(), new_obj.absolute_url(), e))
+        setSchemaField(new_obj, k, v)
 
     setLocalRolesBlock(new_obj, obj_data['metadata']['local_roles_block'])
     setObjectPosition(new_obj, obj_data['metadata']['position_parent'])
@@ -445,15 +457,7 @@ def create_new_obj(options, folder, old_uid):
     for k, v in obj_data['schemadata'].items():
         if k in IGNORED_FIELDS:
             continue
-        field = new_obj.Schema().getField(k)
-        if field is None or field.type == "reference":
-            continue
-        if isinstance(v, basestring) and v.startswith('file://'):
-            v = urllib2.urlopen(v).read()
-        try:
-            field.set(new_obj, v)
-        except Exception, e:
-            log('Unable to set %s for %s (%s)' % (k, new_obj.absolute_url(1), e))
+        setSchemaField(new_obj, k, v)
 
     setLocalRolesBlock(new_obj, obj_data['metadata']['local_roles_block'])
     setObjectPosition(new_obj, obj_data['metadata']['position_parent'])
@@ -477,8 +481,11 @@ def import_topic_criterions(options, topic, criterion_ids, old_uid):
         if not crit_data or not crit_data.get('portal_type') or not crit_data.get('field'):
             # disabled suptopic support
             continue
-        crit = topic.addCriterion(crit_data['field'], crit_data['portal_type'])
-        if not crit:
+        try:
+            crit = topic.addCriterion(crit_data['field'],
+                crit_data['portal_type'])
+        except Exception, msg:
+            log('Could not create Criterion: %s' % msg)
             continue
         crit_schema = crit.aq_base.Schema()
         for field in crit_schema.fields():
