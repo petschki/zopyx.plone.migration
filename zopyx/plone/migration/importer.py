@@ -742,11 +742,15 @@ def import_site(options):
         raise ValueError('Unknown user: %s' % options.username)
     newSecurityManager(None, user.__of__(uf))
 
-    url = import_plone(options)
+    if options.reimport_topic_criterions:
+        reimport_topic_criterions(options)
+    else:
+        url = import_plone(options)
+        log(url)
+
     log('Committing...')
     transaction.commit()
     log('done')
-    log(url)
 
 def main():
     import Zope2
@@ -761,9 +765,6 @@ def main():
     parser.add_option('-r', '--reimport-topic-criterions', dest='reimport_topic_criterions', action='store_true', default=False)
     options, args = parser.parse_args()
     options.app = app
-    if options.reimport_topic_criterions:
-        reimport_topic_criterions(options)
-        return
     import_site(options)
 
 if __name__ == '__main__':
