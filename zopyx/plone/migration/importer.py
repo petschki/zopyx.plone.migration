@@ -379,7 +379,11 @@ def setReviewState(content, state_id, acquire_permissions=False,
 
 
 def setSchemaField(obj, name, value):
-    field = obj.Schema().getField(name)
+    try:
+        field = obj.Schema().getField(name)
+    except:
+        log("%s has no Schema" % obj)
+        return
     if field:
         if field.type == "reference":
             # reference fields are not handled here
@@ -661,9 +665,12 @@ def import_content(options):
                 old_uids = obj_data['schemadata'][name] or []
                 new_refs = uids_to_references(options, obj, old_uids)
                 if len(new_refs) > 0:
-                    if options.verbose:
-                        log("--> New References for %s (%s): %s" % (name, path, new_refs))
-                    f.set(obj, new_refs)
+                    try:
+                        f.set(obj, new_refs)
+                        if options.verbose:
+                            log("--> New References for %s (%s): %s" % (name, path, new_refs))
+                    except:
+                        log("ERROR setting new references: %s (%s) %s" % (name, path, new_refs))
 
 
 def log(s):
