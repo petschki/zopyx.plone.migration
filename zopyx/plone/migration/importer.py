@@ -516,6 +516,27 @@ def uids_to_references(options, context, old_uids):
     return new_refs
 
 
+def reimport_topic_criterions(options):
+    # reimporting/rewriting
+    content_ini = os.path.join(options.input_directory, 'content.ini')
+    CP = ConfigParser()
+    CP.read([content_ini])
+    get = CP.get
+    sections = CP.sections()
+    log('Reimporting Topic Criterions')
+    for i, section in enumerate(sections):
+        if CP.get(section, 'portal_type') == 'Topic':
+            id_ = CP.get(section, 'id')
+            path = CP.get(section, 'path')
+            old_uid = CP.get(section, 'uid')
+            crit_ids = CP.get(section, 'topic_criterions').split(',')
+            obj = myRestrictedTraverse(options.plone, path)
+            if obj:
+                obj.manage_delObjects(obj.objectIds())
+                import_topic_criterions(options, obj, crit_ids, old_uid)
+                log("Fixed topic criterions for %s" % path)
+
+
 def import_content(options):
 
     installed_products = [p['id'] for p in options.plone.portal_quickinstaller.listInstalledProducts()]
@@ -730,8 +751,12 @@ def main():
     parser.add_option('-d', '--dest-folder', dest='dest_folder', default='sites')
     parser.add_option('-t', '--timestamp', dest='timestamp', action='store_true')
     parser.add_option('-v', '--verbose', dest='verbose', action='store_true', default=False)
+    parser.add_option('-r', '--reimport-topic-criterions', dest='reimport_topic_criterions', action='store_true', default=False)
     options, args = parser.parse_args()
     options.app = app
+    if options.reimport_topic_criterions:
+        reimport_topic_criterions(options)
+        return
     import_site(options)
 
 if __name__ == '__main__':
