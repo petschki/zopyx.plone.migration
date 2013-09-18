@@ -537,8 +537,30 @@ def reimport_topic_criterions(options):
             obj = myRestrictedTraverse(options.plone, path)
             if obj:
                 obj.manage_delObjects(obj.objectIds())
+                transaction.savepoint()
                 import_topic_criterions(options, obj, crit_ids, old_uid)
                 log("Fixed topic criterions for %s" % path)
+
+
+def reimport_newsitems(options):
+    content_ini = os.path.join(options.input_directory, 'content.ini')
+    CP = ConfigParser()
+    CP.read([content_ini])
+    get = CP.get
+    sections = CP.sections()
+    log('Reimporting FKNewsItem Criterions')
+    for i, section in enumerate(sections):
+        if CP.get(section, 'portal_type') == 'FKNewsItem':
+            id_ = CP.get(section, 'id')
+            path = CP.get(section, 'path')
+            old_uid = CP.get(section, 'uid')
+            obj = myRestrictedTraverse(options.plone, path)
+            if obj:
+                parent = aq_parent(aq_inner(obj))
+                parent.manage_delObjects([id_, ])
+                transaction.savepoint()
+                create_new_obj(options, parent, old_uid)
+                log("Reimported %s" % parent[id_].absolute_url())
 
 
 def import_content(options):
@@ -743,7 +765,11 @@ def import_site(options):
     newSecurityManager(None, user.__of__(uf))
 
     if options.reimport_topic_criterions:
+        options.plone = getattr(getattr(options.app, options.dest_folder), "plone")
         reimport_topic_criterions(options)
+    elif options.reimport_newsitems:
+        options.plone = getattr(getattr(options.app, options.dest_folder), "plone")
+        reimport_newsitems(options)
     else:
         url = import_plone(options)
         log(url)
@@ -763,6 +789,7 @@ def main():
     parser.add_option('-t', '--timestamp', dest='timestamp', action='store_true')
     parser.add_option('-v', '--verbose', dest='verbose', action='store_true', default=False)
     parser.add_option('-r', '--reimport-topic-criterions', dest='reimport_topic_criterions', action='store_true', default=False)
+    parser.add_option('-n', '--reimport-newsitems', dest='reimport_newsitems', action='store_true', default=False)
     options, args = parser.parse_args()
     options.app = app
     import_site(options)
