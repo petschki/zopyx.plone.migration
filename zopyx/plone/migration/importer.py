@@ -28,6 +28,7 @@ from Products.CMFPlone.utils import _createObjectByType
 from Products.CMFPlacefulWorkflow.WorkflowPolicyConfig import WorkflowPolicyConfig
 from Products.CMFPlacefulWorkflow.PlacefulWorkflowTool import WorkflowPolicyConfig_id
 from Products.CMFCore.Expression import Expression
+from zope.globalrequest import getRequest
 
 IGNORED_FIELDS = ('id', 'relatedItems')
 IGNORED_TYPES = (
@@ -558,6 +559,7 @@ def reimport_newsitems(options):
             if obj:
                 parent = aq_parent(aq_inner(obj))
                 parent.manage_delObjects([id_, ])
+                parent.REQUEST = getRequest()
                 transaction.savepoint()
                 create_new_obj(options, parent, old_uid)
                 log("Reimported %s" % parent[id_].absolute_url())
