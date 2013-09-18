@@ -553,7 +553,7 @@ def reimport_newsitems(options):
     CP.read([content_ini])
     get = CP.get
     sections = CP.sections()
-    log('Reimporting FKNewsItem Criterions')
+    log('Reimporting FKNewsItems')
     for i, section in enumerate(sections):
         if CP.get(section, 'portal_type') == 'FKNewsItem':
             id_ = CP.get(section, 'id')
@@ -564,7 +564,6 @@ def reimport_newsitems(options):
                 parent = obj.aq_inner.aq_parent
                 parent.manage_delObjects([id_, ])
                 transaction.savepoint()
-                parent.REQUEST = getRequest()
                 create_new_obj(options, parent, old_uid)
                 log("Reimported %s" % parent[id_].absolute_url())
 
