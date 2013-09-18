@@ -231,7 +231,11 @@ def setLocalRoles(obj, local_roles):
 def setLayout(obj, layout):
     if not layout:
         return
-    layout_ids = [id for id, title in obj.getAvailableLayouts()]
+    try:
+        layout_ids = [id for id, title in obj.getAvailableLayouts()]
+    except:
+        # objects without REQUEST raise error
+        layout_ids = []
     if layout in layout_ids:
         obj.setLayout(layout)
     else:
@@ -559,8 +563,8 @@ def reimport_newsitems(options):
             if obj:
                 parent = obj.aq_inner.aq_parent
                 parent.manage_delObjects([id_, ])
-                parent.REQUEST = getRequest()
                 transaction.savepoint()
+                parent.REQUEST = getRequest()
                 create_new_obj(options, parent, old_uid)
                 log("Reimported %s" % parent[id_].absolute_url())
 
