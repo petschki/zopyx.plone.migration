@@ -557,7 +557,7 @@ def reimport_newsitems(options):
             old_uid = CP.get(section, 'uid')
             obj = myRestrictedTraverse(options.plone, path)
             if obj:
-                parent = aq_parent(aq_inner(obj))
+                parent = obj.aq_inner.aq_parent
                 parent.manage_delObjects([id_, ])
                 parent.REQUEST = getRequest()
                 transaction.savepoint()
