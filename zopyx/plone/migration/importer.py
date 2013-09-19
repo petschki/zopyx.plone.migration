@@ -280,6 +280,9 @@ def fix_resolve_uids(obj, options):
             raise TypeError('"node_names" must be a list or tuple (not %s)' % type(node_names))
         return './/*[%s]' % ' or '.join(['name()="%s"' % name for name in node_names])
 
+    if options.verbose:
+        log("Fixing resolveuid for %s" % obj)
+
     html = obj.getRawText()
     if not isinstance(html, unicode):
         html = unicode(html, 'utf-8')
@@ -705,7 +708,7 @@ def log(s):
 
 
 def fixup_uids(options):
-    for brain in options.plone.portal_catalog({'portal_type' : ('Document', 'Page', 'News Item', 'ENLIssue')}):
+    for brain in options.plone.portal_catalog({'portal_type' : ('Document', 'Page', 'News Item', 'ENLIssue', 'ExtendedRichDocument', 'FKNewsItem', 'Event')}):
         fix_resolve_uids(brain.getObject(), options)
 
 def setup_plone(app, dest_folder, site_id, products=(), profiles=()):
@@ -775,6 +778,9 @@ def import_site(options):
     elif options.reimport_newsitems:
         options.plone = getattr(getattr(options.app, options.dest_folder), "plone")
         reimport_newsitems(options)
+    elif options.refix_resolve_uids:
+        options.plone = getattr(getattr(options.app, options.dest_folder), "plone")
+        fixup_uids(options)
     else:
         url = import_plone(options)
         log(url)
@@ -795,6 +801,7 @@ def main():
     parser.add_option('-v', '--verbose', dest='verbose', action='store_true', default=False)
     parser.add_option('-r', '--reimport-topic-criterions', dest='reimport_topic_criterions', action='store_true', default=False)
     parser.add_option('-n', '--reimport-newsitems', dest='reimport_newsitems', action='store_true', default=False)
+    parser.add_option('-f', '--refix-resolve-uids', dest='refix_resolve_uids', action='store_true', default=False)
     options, args = parser.parse_args()
     options.app = app
     import_site(options)
