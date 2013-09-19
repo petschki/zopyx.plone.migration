@@ -280,9 +280,6 @@ def fix_resolve_uids(obj, options):
             raise TypeError('"node_names" must be a list or tuple (not %s)' % type(node_names))
         return './/*[%s]' % ' or '.join(['name()="%s"' % name for name in node_names])
 
-    if options.verbose:
-        log("Fixing resolveuid for %s" % obj)
-
     html = obj.getRawText()
     if not isinstance(html, unicode):
         html = unicode(html, 'utf-8')
@@ -304,7 +301,7 @@ def fix_resolve_uids(obj, options):
             if os.path.exists(pickle_filename):
                 old_data = cPickle.load(open(pickle_filename))
                 old_path = old_data['metadata']['path']
-                new_obj = myRestrictedTraverse(obj, old_path)
+                new_obj = myRestrictedTraverse(options.plone, old_path)
                 if new_obj is not None:
                     new_uid = new_obj.UID()
                     url_f = url.split('/')
